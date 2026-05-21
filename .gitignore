@@ -1,0 +1,10 @@
+main.exe
+.cache/
+tickets/
+users.txt
+buses.txt
+bookings.txt
+route_requests.txt
+online_buses.json
+compile_commands.json
+.vscode/
