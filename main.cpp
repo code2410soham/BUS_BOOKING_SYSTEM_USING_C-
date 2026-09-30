@@ -254,6 +254,7 @@ struct RouteRequest {
   std::string notes;
   std::string status;    // "PENDING" or "APPROVED" or "REJECTED"
   std::string timestamp;
+  std::string adminReply;
 };
 
 // -------------------------------------------------------------
@@ -981,7 +982,7 @@ public:
 
       // Execute powershell command to download the JSON from the internet
       std::string cmd = "powershell -Command \"Invoke-WebRequest -Uri "
-                        "'https://dpaste.com/4R84335CT.txt' -OutFile "
+                        "'https://dpaste.com/96JA75C52.txt' -OutFile "
                         "'online_buses.json' -ErrorAction SilentlyContinue\"";
       std::system(cmd.c_str());
 
@@ -1161,7 +1162,7 @@ public:
       if (line.empty())
         continue;
       std::vector<std::string> parts = split(line, '|');
-      if (parts.size() == 8) {
+      if (parts.size() >= 8) {
         RouteRequest rr;
         rr.requestId    = parts[0];
         rr.username     = parts[1];
@@ -1171,6 +1172,7 @@ public:
         rr.notes        = parts[5];
         rr.status       = parts[6];
         rr.timestamp    = parts[7];
+        if (parts.size() > 8) rr.adminReply = parts[8];
         routeRequests.push_back(rr);
       }
     }
@@ -1187,7 +1189,8 @@ public:
            << sanitizeDelimiters(rr.preferredTime)<< "|"
            << sanitizeDelimiters(rr.notes)        << "|"
            << sanitizeDelimiters(rr.status)       << "|"
-           << sanitizeDelimiters(rr.timestamp)    << "\n";
+           << sanitizeDelimiters(rr.timestamp)    << "|"
+           << sanitizeDelimiters(rr.adminReply)   << "\n";
     }
     file.close();
   }
@@ -2376,6 +2379,9 @@ public:
         std::cout << "  " << std::left << std::setw(14) << rr.requestId
                   << std::setw(14) << rr.source << std::setw(14) << rr.destination
                   << std::setw(12) << rr.preferredTime << statusCol << std::endl;
+        if (!rr.adminReply.empty()) {
+          std::cout << "    " << Color::BRIGHT_BLACK << "↳ Admin Reply: " << Color::WHITE << rr.adminReply << Color::RESET << std::endl;
+        }
       }
       std::cout << "  " << std::string(72, '-') << std::endl << std::endl;
     }
@@ -3530,8 +3536,8 @@ public:
         continue;
       } else if (act == 2) {
         // Reject
-        std::string reason = getValidString("  Enter reason for rejection (internal note): ");
-        (void)reason; // stored conceptually; not persisted separately
+        std::string reason = getValidString("  Enter reason for rejection (this will be sent to the customer): ");
+        target->adminReply = reason;
         target->status = "REJECTED";
         saveRouteRequests();
         showLoader("  Processing rejection...", 6, 12);
@@ -3621,6 +3627,8 @@ public:
         saveBuses();
 
         // Mark request approved
+        std::string reply = getValidString("\n  Enter an approval message/reply for the customer: ");
+        target->adminReply = reply;
         target->status = "APPROVED";
         saveRouteRequests();
 

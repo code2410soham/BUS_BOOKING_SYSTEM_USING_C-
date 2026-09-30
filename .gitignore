@@ -8,3 +8,5 @@ route_requests.txt
 online_buses.json
 compile_commands.json
 .vscode/
+*.csv
+*.log
